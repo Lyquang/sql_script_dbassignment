@@ -13,7 +13,7 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
--- 0 . check nhan vien phai du 18 tuoi 
+-- 0 . check nhan vien phai du 18 tuoi va khac null
 DELIMITER //
 CREATE PROCEDURE check_dob (IN dob DATE)
 BEGIN
@@ -106,6 +106,49 @@ begin
 end //
 DELIMITER ;
 
+-- 3. them nhan vien thu viec  
+DELIMITER //
+CREATE PROCEDURE insert_into_nhanvien_thuviec (
+    msnv CHAR(9), 
+    hovaten VARCHAR(20), 
+    ngaysinh DATE, 
+    gioitinh VARCHAR(4), 
+    cccd CHAR(12), 
+    loai_nhan_vien VARCHAR(10), 
+    masophongban CHAR(9),
+    start_date DATE,
+    end_date DATE,
+    nguoiquanly CHAR(9)
+)
+BEGIN 
+    -- Check if start_date and end_date are provided
+    IF start_date IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hay nhap ngay bat dau thu viec !';
+    END IF;
+    IF end_date IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hay nhap ngay ket thuc thu viec!';
+    END IF;
+    -- Check if nguoiquanly (manager) is provided
+    IF nguoiquanly IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Nhan vien thu viec phai co nhan vien chinh thuc quan ly !';
+    END IF;
+    -- Ensure probation period is at least 1 month (30 days)
+    IF DATEDIFF(end_date, start_date) < 30 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Thoi gian thu viec phai it nhat 1 thang!';
+    END IF;
+    -- Insert the new employee into the main table (insert_into_nhanvien)
+    CALL insert_into_nhanvien(msnv, hovaten, ngaysinh, gioitinh, cccd, loai_nhan_vien, masophongban);
+    -- Insert the probation details into the nv_thuviec table
+    INSERT INTO nv_thuviec (maso_nv, start_date, end_date, nv_giamsat)
+    VALUES (msnv, start_date, end_date, nguoiquanly);
+END //
+DELIMITER ;
+
+SELECT TRIGGER_NAME
+FROM information_schema.TRIGGERS
+WHERE TRIGGER_SCHEMA = 'db_assignment';
+
+select * from phong_ban
 
 
 
