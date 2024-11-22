@@ -43,8 +43,7 @@ BEGIN
 	end if ;
 END //
 DELIMITER ;
-
--- -------------------------------------------------------------------------------------
+-- ##################################################################################
 -- 1. Thêm mới một nhân viên vào bảng nhan_vien 
 DELIMITER //
 CREATE PROCEDURE insert_into_nhanvien ( 
@@ -81,6 +80,7 @@ BEGIN
     insert nhan_vien (maso_nv,hoten,ngaysinh,gioitinh,cccd , loainhanvien , masophongban) values (msnv,hovaten,ngaysinh,gioitinh,cccd,loai_nhan_vien,masophongban);
 END //
 DELIMITER ;
+-- ##################################################################################
 -- 2. them nhan vien chinh thuc  
 DELIMITER //
 CREATE PROCEDURE insert_into_nhanvien_chinhthuc (
@@ -89,7 +89,6 @@ CREATE PROCEDURE insert_into_nhanvien_chinhthuc (
     ngaysinh DATE, 
     gioitinh VARCHAR(4), 
     cccd CHAR(12), 
-    loai_nhan_vien VARCHAR(10), 
     masophongban CHAR(9)  ,
     bhxh varchar(20),
     nguoiquanly char(9)
@@ -101,12 +100,12 @@ begin
     if nguoiquanly not in (select maso_nv from nv_chinhthuc) then
 		signal sqlstate '45000' set message_text = 'Nhan vien quan ly khong ton tai !';
 	end if;
-	call insert_into_nhanvien(msnv,hovaten,ngaysinh,gioitinh,cccd,loai_nhan_vien,masophongban) ;
+	call insert_into_nhanvien(msnv,hovaten,ngaysinh,gioitinh,cccd,'chinh thuc',masophongban) ;
     insert nv_chinhthuc (maso_nv , bhxh , maso_nguoiquanly) values (msnv , bhxh , maso_nguoiquanly);
 end //
 DELIMITER ;
-
--- 3. them nhan vien thu viec  
+-- ##################################################################################
+ -- 3. them nhan vien thu viec  
 DELIMITER //
 CREATE PROCEDURE insert_into_nhanvien_thuviec (
     msnv CHAR(9), 
@@ -143,12 +142,82 @@ BEGIN
     VALUES (msnv, start_date, end_date, nguoiquanly);
 END //
 DELIMITER ;
+-- ##################################################################################
+-- 4. them ls cong viec
+DELIMITER //
 
-SELECT TRIGGER_NAME
-FROM information_schema.TRIGGERS
-WHERE TRIGGER_SCHEMA = 'db_assignment';
+CREATE PROCEDURE insert_into_ls_congviec (
+    msnv CHAR(9),
+    start_date DATE,
+    chucvu VARCHAR(30),
+    loainv VARCHAR(10),
+    lcb DECIMAL(10,2),
+    mspb CHAR(9)
+)
+BEGIN
+    -- Khai báo biến
+    DECLARE cur_stt INT;
+    -- Kiểm tra các tham số đầu vào
+    CALL check_ms(msnv);
+    IF start_date IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hãy thêm ngày bắt đầu!';
+    END IF;
+    IF chucvu IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hãy thêm chức vụ!';
+    END IF;
+    IF loainv IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hãy thêm loại nhân viên!';
+    END IF;
+    IF loainv NOT IN ('chinh thuc', 'thu viec') THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Loại nhân viên không tồn tại!';
+    END IF;
+    IF lcb IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hãy thêm lương cơ bản!';
+    END IF;
+    IF mspb IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hãy thêm mã phòng ban!';
+    END IF;
+    -- Kiểm tra xem mã phòng ban có tồn tại không
+    IF NOT EXISTS (SELECT 1 FROM phong_ban WHERE masophongban = mspb) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Mã phòng ban không tồn tại!';
+    END IF;
+    -- Kiểm tra nếu nhân viên đã có trong bảng ls_congviec
+    IF EXISTS (SELECT 1 FROM ls_congviec WHERE maso_nv = msnv) THEN
+        -- Lấy giá trị stt cao nhất cho nhân viên
+        SELECT MAX(stt) INTO cur_stt
+        FROM ls_congviec
+        WHERE maso_nv = msnv;
+        -- Thêm công việc mới cho nhân viên, tăng stt lên 1
+        INSERT INTO ls_congviec (maso_nv, stt, start_date, chucvu, loai_nv, luong_coban, maso_phongban)
+        VALUES (msnv, cur_stt + 1, start_date, chucvu, loainv, lcb, mspb);
+    ELSE
+        -- Nếu nhân viên chưa có trong bảng, thêm công việc mới với stt = 1
+        INSERT INTO ls_congviec (maso_nv, stt, start_date, chucvu, loai_nv, luong_coban, maso_phongban)
+        VALUES (msnv, 1, start_date, chucvu, loainv, lcb, mspb);
+    END IF;
+END //
+DELIMITER ;
 
-select * from phong_ban
+-- CALL insert_into_ls_congviec('NV0000001', '2023-11-01', 'Trưởng phòng', 'chinh thuc', 25000000.00, 'PB0000001');
 
 
+-- ##########################################################
 
+-- 1 Tìm tên , luong thuc te của nhân viên có lương thực tế cao nhất trong tháng a va nam b cua phong ban c co luong thuc te > d
+drop PROCEDURE if exists tim_maxluong_withinPhongban_inMonth ;
+DELIMITER //
+CREATE PROCEDURE tim_maxluong_withinPhongban_inMonth ( t int , n int  , d dec(10,2) )
+BEGIN
+	select distinct nv.hoten,nv.maso_nv , bl2.luongthucte
+    from (	select max(bl.luongthucte) as maxluong , nv.masophongban as mspb
+			from bangluong as bl , nhan_vien as nv
+			where bl.thang =  t and bl.nam =  n and nv.maso_nv = bl.maso_nv
+			group by nv.masophongban
+            ) as m , nhan_vien as nv, bangluong as bl2 
+	where   nv.masophongban = m.mspb and bl2.luongthucte = m.maxluong and nv.maso_nv = bl2.maso_nv
+	GROUP BY nv.hoten, nv.maso_nv, bl2.luongthucte
+	HAVING bl2.luongthucte >  d 
+	ORDER BY bl2.luongthucte;
+END // 
+DELIMITER ;
+call tim_maxluong_withinPhongban_inMonth (3,22222 , 10);
