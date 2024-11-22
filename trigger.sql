@@ -76,3 +76,58 @@ update bangchamcong
 set sogio_hientai = sogio_hientai + 400 
 where  maso_nv = 'NV0000002' and thang = 11 and nam = 2024 ;
 select * from bangchamcong where  maso_nv = 'NV0000002' and thang = 11 and nam = 2024 ; 
+
+-- (22/11) Khi thêm một nhân viên mới vào 1 phòng ban thì cập nhật số lượng nhân viên trong phòng ban đó
+DELIMITER $$
+CREATE TRIGGER update_soluong_nhanvien_khithemnhanvien
+BEFORE INSERT
+ON nhan_vien
+FOR EACH ROW
+BEGIN
+	UPDATE phong_ban
+	SET soluongnhanvien = soluongnhanvien + 1
+	WHERE masophongban = NEW.masophongban;
+END;
+$$
+DELIMITER ;
+-- Khi thay doi ma phong ban o bang nhan _vien
+DELIMITER $$
+CREATE TRIGGER update_soluong_nhanvien_khichuyenphongban
+BEFORE UPDATE
+ON nhan_vien
+FOR EACH ROW
+BEGIN
+    -- Khai báo biến để lưu mã phòng ban cũ
+    DECLARE old_dept_id CHAR(9);
+    -- Tìm mã phòng ban cũ
+    SET old_dept_id = OLD.masophongban;
+    -- Giảm số lượng nhân viên ở phòng ban cũ
+    UPDATE phong_ban
+    SET soluongnhanvien = soluongnhanvien - 1
+    WHERE masophongban = old_dept_id;
+    -- Tăng số lượng nhân viên ở phòng ban mới
+    UPDATE phong_ban
+    SET soluongnhanvien = soluongnhanvien + 1
+    WHERE masophongban = NEW.masophongban;
+END $$
+DELIMITER ;
+DELIMITER $$
+
+CREATE TRIGGER update_soluong_nhanvien_khixoa
+BEFORE DELETE
+ON nhan_vien
+FOR EACH ROW
+BEGIN
+    -- Khai báo biến để lưu mã phòng ban của nhân viên bị xóa
+    DECLARE old_dept_id CHAR(9);
+    
+    -- Tìm mã phòng ban của nhân viên bị xóa
+    SET old_dept_id = OLD.masophongban;
+
+    -- Giảm số lượng nhân viên trong phòng ban cũ
+    UPDATE phong_ban
+    SET soluongnhanvien = soluongnhanvien - 1
+    WHERE masophongban = old_dept_id;
+END $$
+DELIMITER ;
+
