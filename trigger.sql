@@ -131,3 +131,6 @@ BEGIN
 END $$
 DELIMITER ;
 
+select * from phong_ban	phong_ban
+
+
