@@ -114,7 +114,7 @@ create table nvthuviec(
     constraint thu_viec_it_nhat_30day check (enddate - startdate >=30),
     constraint fk_giamsat_nv foreign key (nvgiamsat) references nvchinhthuc (msnv) on update cascade 
 );
-
+	
 create table lscongviec (
 	msnv 		char (9) 		not null ,
     stt 		int 			not null,
@@ -143,6 +143,13 @@ create table duan(
     constraint fk_duAn foreign key (ma_phong_ban_quanly) references phongban(mspb) on update cascade
 );
 
+create table nhanvien_thamgia_duan(
+	msda char (9) not null ,
+    msnv char (9) not null ,
+    primary key (msda , msnv) ,
+    constraint fk_to_da foreign key (msda) references duan (mada) on delete cascade on update cascade , 
+    constraint fk_to_msnv foreign key (msnv) references nhanvien (msnv) on delete cascade on update cascade 
+);
 
 
 
