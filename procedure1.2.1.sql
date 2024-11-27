@@ -1,4 +1,5 @@
 -- them vao bang nhan vien 
+-- chilling
 select * from nhanvien;
 drop procedure if exists insert_into_nhanvien ;
 DELIMITER //
