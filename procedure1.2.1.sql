@@ -1,4 +1,5 @@
 -- them vao bang nhan vien 
+
 select * from nhanvien;
 drop procedure if exists insert_into_nhanvien ;
 DELIMITER //
@@ -84,6 +85,7 @@ DELIMITER ;
 
 
 -- 1.2.1 procedure Them 1 nhan vien chinh thuc 
+-- oke
 DROP PROCEDURE IF EXISTS insert_nvchinhthuc;
 DELIMITER //
 CREATE PROCEDURE insert_nvchinhthuc (
